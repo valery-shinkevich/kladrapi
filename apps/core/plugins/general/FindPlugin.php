@@ -8,10 +8,12 @@ namespace Kladr\Core\Plugins\General {
         \Kladr\Core\Plugins\Base\PluginResult,
         \Kladr\Core\Plugins\Tools\Tools,
         \Kladr\Core\Models\Regions,
+		\Kladr\Core\Models\KladrFields,
         \Kladr\Core\Models\Districts,
         \Kladr\Core\Models\Cities,
         \Kladr\Core\Models\Streets,
         \Kladr\Core\Models\Buildings;
+
 
     /**
      * Kladr\Core\Plugins\General\FindPlugin
@@ -79,8 +81,24 @@ namespace Kladr\Core\Plugins\General {
                 $cityId = $request->getQuery('cityId');
                 if ($cityId)
                 {
-                    $arCodes = $request->getQuery('contentType') == 'city' ?
-                            $cityId : Cities::getCodes($cityId);
+                    if($request->getQuery('contentType') == 'city')
+					{
+						$arCodes = $cityId;
+					}
+					else
+					{
+						$arCodes = Cities::getCodes($cityId);
+						$cityCode = $arCodes[KladrFields::CodeLocality];
+						$cityCodeOwner = $cityCode - ($cityCode % 1000);
+						if($cityCode == $cityCodeOwner)
+						{
+							$cityCodeOwnerNext = $cityCodeOwner + 1000;
+							$arCodes[KladrFields::CodeLocality] = array(
+								'$gte' => $cityCodeOwner,
+								'$lt' => $cityCodeOwnerNext
+							);
+						}
+					}
                 }
 
                 // streetId
@@ -113,6 +131,10 @@ namespace Kladr\Core\Plugins\General {
                 //offset
                 $offset = $request->getQuery('offset');
                 $offset = intval($offset);
+                
+                //strict 
+                $strict = trim($request->getQuery('strict'));
+                $strict = $strict && $strict != '' ? true : false;
 
                 $typeCodes = self::ConvertCodeTypeToArray($request->getQuery('typeCode'));
 
@@ -125,7 +147,7 @@ namespace Kladr\Core\Plugins\General {
                         $objects = Districts::findByQuery($query, $arCodes, $limit, $offset);
                         break;
                     case Cities::ContentType:
-                        $objects = Cities::findByQuery($query, $arCodes, $limit, $offset, $typeCodes);
+                        $objects = Cities::findByQuery($query, $arCodes, $limit, $offset, $typeCodes, $strict);
                         break;
                     case Streets::ContentType:
                         $objects = Streets::findByQuery($query, $arCodes, $limit, $offset);

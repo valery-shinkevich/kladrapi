@@ -1,6 +1,7 @@
 <?php
 
-namespace Kladr\Core\Plugins\General {
+namespace Kladr\Core\Plugins\General
+{
 
     use \Phalcon\Http\Request,
         \Phalcon\Mvc\User\Plugin,
@@ -127,19 +128,24 @@ namespace Kladr\Core\Plugins\General {
                 $city = $mongo->cities->findOne(array('Id' => $cityId));
                 $codeCity = $city['CodeCity'];
 
-                if($city['CodeCity'] != null && ($city['CodeCity'] % 1000 == 0))
+                if ($city['CodeCity'] != null && ($city['CodeCity'] % 1000 == 0))
                 {
                     $cc = $city['CodeCity'];
                     $codeCity = array('$gte' => $cc, '$lt' => $cc + 1000);
                 }
+
+                if ($codeCity == null)
+                    $codeCity = 0;
 
 
                 $streets = $mongo->streets->find(
                         array(
                             'Bad' => false,
                             'CodeCity' => $codeCity,
-                            'CodeDistrict' => $city['CodeDistrict'],
+                            'CodeDistrict' => (int) $city['CodeDistrict'],
                             'CodeRegion' => $city['CodeRegion']));
+
+                $subCityCache = array();
 
                 $tmp = $this->getCachePath($cacheKey) . '_' . rand(10000, 10000000);
                 $fp = fopen($tmp, 'w');
@@ -148,20 +154,63 @@ namespace Kladr\Core\Plugins\General {
                     fputcsv($fp, $this->streetToArray());
                     foreach ($streets as $street)
                     {
+
+                        $subCity = false;
+
+                        $codeSubCity = (int) $street['CodeCity'];
+                        if (isset($subCityCache[$codeSubCity]))
+                        {
+                            $subCity = $subCityCache[$codeSubCity];
+                        } else
+                        {
+                            $subCity = $mongo->cities->findOne(
+                                    array(
+                                        'Bad' => false,
+                                        'CodeCity' => $codeSubCity,
+                                        'CodeDistrict' => (int) $city['CodeDistrict'],
+                                        'CodeRegion' => $city['CodeRegion']));
+
+                            $subCityCache[$codeSubCity] = $subCity ? $subCity : false;
+                        }
+
+                        $street['SubCity'] = $subCity;
+
+
                         fputcsv($fp, $this->streetToArray($street));
                     }
-                }
-                else
+                } else
                 {
                     fwrite($fp, '{ "result" : [');
                     $first = true;
                     foreach ($streets as $street)
                     {
+
+                        $subCity = false;
+
+                        $codeSubCity = (int) $street['CodeCity'];
+                        if (isset($subCityCache[$codeSubCity]))
+                        {
+                            $subCity = $subCityCache[$codeSubCity];
+                        } else
+                        {
+                            $subCity = $mongo->cities->findOne(
+                                    array(
+                                        'Bad' => false,
+                                        'CodeCity' => $codeSubCity,
+                                        'CodeDistrict' => (int) $city['CodeDistrict'],
+                                        'CodeRegion' => $city['CodeRegion']));
+
+                            $subCityCache[$codeSubCity] = $subCity ? $subCity : false;
+                        }
+
+                        $street['SubCity'] = $subCity;
+
+
+
                         if ($first)
                         {
                             $first = false;
-                        }
-                        else
+                        } else
                         {
                             fwrite($fp, ',' . PHP_EOL);
                         }
@@ -249,8 +298,7 @@ namespace Kladr\Core\Plugins\General {
 
                         fputcsv($fp, $this->cityToArray($city, $district, $region));
                     }
-                }
-                else
+                } else
                 {
                     fwrite($fp, '{ "result" : [');
                     $first = true;
@@ -259,8 +307,7 @@ namespace Kladr\Core\Plugins\General {
                         if ($first)
                         {
                             $first = false;
-                        }
-                        else
+                        } else
                         {
                             fwrite($fp, ',' . PHP_EOL);
                         }
@@ -400,6 +447,7 @@ namespace Kladr\Core\Plugins\General {
          */
         private function streetToJson($street = null)
         {
+
             return json_encode(
                     array(
                         'id' => $street['Id'],
@@ -407,7 +455,10 @@ namespace Kladr\Core\Plugins\General {
                         'okato' => $street['Okato'],
                         'zip' => $street['ZipCode'],
                         'type' => $street['Type'],
-                        'typeShort' => $street['TypeShort']
+                        'typeShort' => $street['TypeShort'],
+                        'parentName' => $street['SubCity'] ? $street['SubCity']['Name'] : '',
+                        'parentType' => $street['SubCity'] ? $street['SubCity']['Type'] : '',
+                        'parentShortType' => $street['SubCity'] ? $street['SubCity']['TypeShort'] : ''
             ));
         }
 
@@ -418,6 +469,7 @@ namespace Kladr\Core\Plugins\General {
          */
         private function streetToArray($street = null)
         {
+
             if ($street == null)
                 return array(
                     'id' => 'Id',
@@ -425,7 +477,10 @@ namespace Kladr\Core\Plugins\General {
                     'okato' => 'Okato',
                     'zipCode' => 'ZipCode',
                     'type' => 'Type',
-                    'typeShort' => 'TypeShort'
+                    'typeShort' => 'TypeShort',
+                    'parentName' => 'ParentName',
+                    'parentType' => 'ParentType',
+                    'parentShortType' => 'ParentShortType'
                 );
 
             return array(
@@ -434,7 +489,10 @@ namespace Kladr\Core\Plugins\General {
                 'okato' => $street['Okato'],
                 'zipCode' => $street['ZipCode'],
                 'type' => $street['Type'],
-                'typeShort' => $street['TypeShort']
+                'typeShort' => $street['TypeShort'],
+                'parentName' => $street['SubCity'] ? $street['SubCity']['Name'] : '',
+                'parentType' => $street['SubCity'] ? $street['SubCity']['Type'] : '',
+                'parentShortType' => $street['SubCity'] ? $street['SubCity']['TypeShort'] : ''
             );
         }
 

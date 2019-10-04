@@ -2,9 +2,9 @@
 $h =  $embedded ? 'h2' : 'h1';
 $style = $embedded ? 'display: none;' : '';
 ?>
-<?if($embedded):?>
+<?php if($embedded):?>
 <h4 class="blocktoggle bitrixdoc dotted" data-block="bitrixdoc">1С-Битрикс</h4>
-<?endif?>
+<?php endif?>
 <div class="correctwidth">
 <div class="bitrixdoc docblock" style="<?=$style?>">
     <a name="bitrix"></a>
@@ -17,7 +17,7 @@ $style = $embedded ? 'display: none;' : '';
 		    <li>   <noindex><a href="https://github.com/garakh/kladr-bitrix/zipball/master">Скачать ZIP</a></noindex></li>
                 </ul>
 
-    <h3>Описание</h3>
+    <h3>Описание (модуль устарел)</h3>
     <p>Модуль 1С-Битрикс предоставляющий форму для ввода адреса с автодополнением. В качестве источника данных используется сервис «КЛАДР в облаке»</p>
     <img src="/content/kladr-bitrix1.png">
 
@@ -90,7 +90,7 @@ $style = $embedded ? 'display: none;' : '';
             Это сделано для того чтобы вы без проблем могли включить поля для ввода адреса в любую другую существующую форму на вашем сайте (к примеру форму оформления заказа).
         </p>
 
-    <?if($embedded):?><a href="bitrix/">Bitrix</a><?endif?>
+    <?php if($embedded):?><a href="bitrix/">Bitrix</a><?php endif?>
 
 
 
